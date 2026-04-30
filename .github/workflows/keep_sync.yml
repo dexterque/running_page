@@ -43,3 +43,12 @@ jobs:
           git add .
           git commit -m 'update keep runs' || echo 'nothing to commit'
           git push || echo 'nothing to push'
+
+  publish_github_pages:
+    name: Build and publish Github Pages
+    needs:
+      - sync
+    uses: ./.github/workflows/gh-pages.yml
+    with:
+      save_data_in_github_cache: false
+      data_cache_prefix: track_data
