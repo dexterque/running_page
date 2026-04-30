@@ -10,30 +10,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ 拉取代码
       - uses: actions/checkout@v3
 
-      # 2️⃣ 安装 Node 22
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '22.12'
 
-      # 3️⃣ 安装依赖
       - name: Install dependencies
         run: |
           rm -rf node_modules package-lock.json
           npm install
 
-      # 4️⃣ 构建
       - name: Build project
         run: npm run build
 
-      # 5️⃣ 部署 dist 目录到 GitHub Pages
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v6
+        uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist  # 构建输出目录
+          publish_dir: ./dist
           user_name: 'github-actions'
           user_email: 'github-actions@github.com'
