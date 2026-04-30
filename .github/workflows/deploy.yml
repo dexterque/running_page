@@ -8,6 +8,8 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 强制 Node 24
 
     steps:
       - uses: actions/checkout@v3
@@ -17,13 +19,20 @@ jobs:
         with:
           node-version: '22.12'
 
-      - name: Install dependencies
+      - name: Clean dependencies
         run: |
           rm -rf node_modules package-lock.json
           npm install
 
       - name: Build project
         run: npm run build
+
+      - name: Check build output
+        run: |
+          if [ ! -d "./dist" ]; then
+            echo "dist directory not found! Build failed."
+            exit 1
+          fi
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
@@ -32,3 +41,4 @@ jobs:
           publish_dir: ./dist
           user_name: 'github-actions'
           user_email: 'github-actions@github.com'
+          force_orphan: true  # 强制覆盖
