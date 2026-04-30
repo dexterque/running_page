@@ -4,6 +4,16 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 * * * *'
+  push:
+    branches:
+      - master
+    paths:
+      - .github/workflows/keep_sync.yml
+      - .github/workflows/run_data_sync.yml
+      - assets/index.tsx
+      - src/**
+      - package.json
+      - pnpm-lock.yaml
 
 permissions:
   contents: write
