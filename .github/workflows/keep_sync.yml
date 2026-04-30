@@ -1,19 +1,45 @@
 name: Keep Sync
 
 on:
+  workflow_dispatch:
   schedule:
-    - cron: '0 * * * *'  # Run every hour
+    - cron: '0 * * * *'
+
+permissions:
+  contents: write
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
       - name: Sync Keep running data
+        run: python run_page/keep_sync.py "${{ secrets.KEEP_MOBILE }}" "${{ secrets.KEEP_PASSWORD }}" --with-gpx
+
+      - name: Generate SVG assets
         run: |
-          echo "Syncing data with phone number: 17620456535"
-          # Add your command here to sync data using the phone number and password
-          # For example:
-          # ./sync_script.sh 17620456535 fkp92852626X
+          python run_page/gen_svg.py --from-db --title "Keep Running" --type github --github-style "align-firstday" --athlete "keep" --special-distance 10 --special-distance2 20 --special-color yellow --special-color2 red --output assets/github.svg --use-localtime --min-distance 0.5
+          python run_page/gen_svg.py --from-db --title "Over 10km Runs" --type grid --athlete "keep" --output assets/grid.svg --special-color yellow --special-color2 red --special-distance 20 --special-distance2 40 --use-localtime --min-distance 10
+
+      - name: Push new runs
+        run: |
+          git config --local user.email 'action@github.com'
+          git config --local user.name 'GitHub Action'
+          git add .
+          git commit -m 'update keep runs' || echo 'nothing to commit'
+          git push || echo 'nothing to push'
