@@ -1,0 +1,19 @@
+name: Keep Sync
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Run every hour
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Sync Keep running data
+        run: |
+          echo "Syncing data with phone number: 17620456535"
+          # Add your command here to sync data using the phone number and password
+          # For example:
+          # ./sync_script.sh 17620456535 fkp92852626X
