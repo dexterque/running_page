@@ -35,8 +35,17 @@ jobs:
 
       - name: Generate SVG assets
         run: |
+          rm -f assets/github.svg assets/grid.svg assets/mol*.svg assets/year_*.svg assets/year_summary_*.svg assets/github_*.svg
           python run_page/gen_svg.py --from-db --title "Keep Running" --type github --github-style "align-firstday" --athlete "keep" --special-distance 10 --special-distance2 20 --special-color yellow --special-color2 red --output assets/github.svg --use-localtime --min-distance 0.5
           python run_page/gen_svg.py --from-db --title "Over 10km Runs" --type grid --athlete "keep" --output assets/grid.svg --special-color yellow --special-color2 red --special-distance 20 --special-distance2 40 --use-localtime --min-distance 10
+          python run_page/gen_svg.py --from-db --type circular --use-localtime
+          python run_page/gen_svg.py --from-db --title "Keep Running" --type github --github-style "align-firstday" --athlete "keep" --special-distance 10 --special-distance2 20 --special-color yellow --special-color2 red --output assets/github.svg --use-localtime --min-distance 0.5 --generate-all-years
+          python run_page/gen_svg.py --from-db --type year_summary --output assets/year_summary.svg --athlete "keep"
+          python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol.svg --use-localtime --athlete "keep" --title "Month of Life" --sport-type all
+          python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol_running.svg --use-localtime --athlete "keep" --title "Runner Month of Life" --sport-type running
+          python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol_walking.svg --use-localtime --athlete "keep" --title "Walker Month of Life" --sport-type walking
+          python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol_hiking.svg --use-localtime --athlete "keep" --title "Hiker Month of Life" --sport-type hiking
+          python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol_cycling.svg --use-localtime --athlete "keep" --title "Cyclist Month of Life" --sport-type cycling
 
       - name: Push new runs
         run: |
