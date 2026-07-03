@@ -98,10 +98,17 @@ jobs:
           REPO_NAME: ${{ github.event.repository.name }}
         run: PATH_PREFIX=/$REPO_NAME pnpm build
 
+      - name: Delete old github-pages artifact (if exists)
+        uses: geekyeggo/delete-artifact@v2
+        with:
+          name: github-pages
+        continue-on-error: true
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
+          retention-days: 1
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
