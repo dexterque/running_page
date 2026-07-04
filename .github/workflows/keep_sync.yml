@@ -15,6 +15,10 @@ on:
       - package.json
       - pnpm-lock.yaml
 
+concurrency:
+  group: keep-sync-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   actions: write
@@ -23,7 +27,9 @@ permissions:
 
 jobs:
   sync:
+    name: Sync Keep Data
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,7 +44,7 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: pip install -r requirements.txt
 
       - name: Sync Keep running data
@@ -47,29 +53,53 @@ jobs:
       - name: Generate SVG assets
         run: |
           rm -f assets/github.svg assets/grid.svg assets/mol*.svg assets/year_*.svg assets/year_summary_*.svg assets/github_*.svg
+
           python run_page/gen_svg.py --from-db --title "Keep Running" --type github --github-style "align-firstday" --athlete "keep" --special-distance 10 --special-distance2 20 --special-color yellow
+
           python run_page/gen_svg.py --from-db --title "Over 10km Runs" --type grid --athlete "keep" --output assets/grid.svg --special-color yellow --special-color2 red --special-distance 20
+
           python run_page/gen_svg.py --from-db --type circular --use-localtime
+
           python run_page/gen_svg.py --from-db --title "Keep Running" --type github --github-style "align-firstday" --athlete "keep" --special-distance 10 --special-distance2 20 --special-color yellow
+
           python run_page/gen_svg.py --from-db --type year_summary --output assets/year_summary.svg --athlete "keep"
+
           python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol.svg --use-localtime --athlete "keep"
+
           python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol_running.svg --use-localtime --athlete "keep"
+
           python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol_walking.svg --use-localtime --athlete "keep"
+
           python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol_cycling.svg --use-localtime --athlete "keep"
 
       - name: Push new runs
         run: |
           git config --local user.email 'action@github.com'
           git config --local user.name 'GitHub Action'
+
           git add .
-          git commit -m 'update keep runs' || echo 'nothing to commit'
-          git push || echo 'nothing to push'
+
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+          else
+            git commit -m 'update keep runs'
+            git push
+          fi
 
   publish_github_pages:
-    name: Build and publish Github Pages
+    name: Build and publish GitHub Pages
     runs-on: ubuntu-latest
     needs:
       - sync
+
+    concurrency:
+      group: pages
+      cancel-in-progress: true
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Checkout latest data
         uses: actions/checkout@v4
@@ -87,11 +117,13 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Enable corepack
-        run: npm install -g corepack@latest && corepack enable pnpm
+      - name: Enable corepack and pnpm
+        run: |
+          npm install -g corepack@latest
+          corepack enable
 
-      - name: Install dependencies
-        run: pnpm install
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         env:
@@ -101,19 +133,23 @@ jobs:
       - name: Inspect build output
         run: |
           echo "Checking ./dist"
-          if [ -d "./dist" ]; then
-            echo "Found ./dist, listing contents:"
-            ls -la ./dist
-            du -sh ./dist || true
-          else
+
+          if [ ! -d "./dist" ]; then
             echo "ERROR: ./dist not found. Build failed or output path changed."
             echo "Workspace contents:"
             ls -la
             exit 1
           fi
 
-      - name: Short wait (allow runner services to settle)
-        run: sleep 3
+          echo "Found ./dist, listing contents:"
+          ls -la ./dist
+          du -sh ./dist || true
+
+          echo "First files in ./dist:"
+          find ./dist -maxdepth 2 -type f | head -50
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
@@ -122,4 +158,5 @@ jobs:
           retention-days: 1
 
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
