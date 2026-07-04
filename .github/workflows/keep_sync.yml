@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
   pages: write
   id-token: write
 
@@ -46,16 +47,15 @@ jobs:
       - name: Generate SVG assets
         run: |
           rm -f assets/github.svg assets/grid.svg assets/mol*.svg assets/year_*.svg assets/year_summary_*.svg assets/github_*.svg
-          python run_page/gen_svg.py --from-db --title "Keep Running" --type github --github-style "align-firstday" --athlete "keep" --special-distance 10 --special-distance2 20 --special-color yellow --special-color2 red --output assets/github.svg --use-localtime --min-distance 0.5
-          python run_page/gen_svg.py --from-db --title "Over 10km Runs" --type grid --athlete "keep" --output assets/grid.svg --special-color yellow --special-color2 red --special-distance 20 --special-distance2 40 --use-localtime --min-distance 10
+          python run_page/gen_svg.py --from-db --title "Keep Running" --type github --github-style "align-firstday" --athlete "keep" --special-distance 10 --special-distance2 20 --special-color yellow
+          python run_page/gen_svg.py --from-db --title "Over 10km Runs" --type grid --athlete "keep" --output assets/grid.svg --special-color yellow --special-color2 red --special-distance 20
           python run_page/gen_svg.py --from-db --type circular --use-localtime
-          python run_page/gen_svg.py --from-db --title "Keep Running" --type github --github-style "align-firstday" --athlete "keep" --special-distance 10 --special-distance2 20 --special-color yellow --special-color2 red --output assets/github.svg --use-localtime --min-distance 0.5 --generate-all-years
+          python run_page/gen_svg.py --from-db --title "Keep Running" --type github --github-style "align-firstday" --athlete "keep" --special-distance 10 --special-distance2 20 --special-color yellow
           python run_page/gen_svg.py --from-db --type year_summary --output assets/year_summary.svg --athlete "keep"
-          python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol.svg --use-localtime --athlete "keep" --title "Month of Life" --sport-type all
-          python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol_running.svg --use-localtime --athlete "keep" --title "Runner Month of Life" --sport-type running
-          python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol_walking.svg --use-localtime --athlete "keep" --title "Walker Month of Life" --sport-type walking
-          python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol_hiking.svg --use-localtime --athlete "keep" --title "Hiker Month of Life" --sport-type hiking
-          python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol_cycling.svg --use-localtime --athlete "keep" --title "Cyclist Month of Life" --sport-type cycling
+          python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol.svg --use-localtime --athlete "keep"
+          python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol_running.svg --use-localtime --athlete "keep"
+          python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol_walking.svg --use-localtime --athlete "keep"
+          python run_page/gen_svg.py --from-db --type monthoflife --birth 1990-01 --special-color "#f9d367" --special-color2 "#f0a1a8" --output assets/mol_cycling.svg --use-localtime --athlete "keep"
 
       - name: Push new runs
         run: |
@@ -85,7 +85,7 @@ jobs:
       - name: Setup Node.js environment
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Enable corepack
         run: npm install -g corepack@latest && corepack enable pnpm
@@ -98,11 +98,22 @@ jobs:
           REPO_NAME: ${{ github.event.repository.name }}
         run: PATH_PREFIX=/$REPO_NAME pnpm build
 
-      - name: Delete old github-pages artifact (if exists)
-        uses: geekyeggo/delete-artifact@v2
-        with:
-          name: github-pages
-        continue-on-error: true
+      - name: Inspect build output
+        run: |
+          echo "Checking ./dist"
+          if [ -d "./dist" ]; then
+            echo "Found ./dist, listing contents:"
+            ls -la ./dist
+            du -sh ./dist || true
+          else
+            echo "ERROR: ./dist not found. Build failed or output path changed."
+            echo "Workspace contents:"
+            ls -la
+            exit 1
+          fi
+
+      - name: Short wait (allow runner services to settle)
+        run: sleep 3
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
