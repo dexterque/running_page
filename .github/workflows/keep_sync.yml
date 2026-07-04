@@ -16,7 +16,7 @@ on:
       - pnpm-lock.yaml
 
 concurrency:
-  group: keep-sync-${{ github.ref }}
+  group: keep-sync-master
   cancel-in-progress: true
 
 permissions:
@@ -34,6 +34,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: master
           fetch-depth: 0
           persist-credentials: true
 
@@ -81,10 +82,32 @@ jobs:
 
           if git diff --cached --quiet; then
             echo "nothing to commit"
-          else
-            git commit -m 'update keep runs'
-            git push
+            exit 0
           fi
+
+          git commit -m 'update keep runs'
+
+          for i in 1 2 3; do
+            echo "Push attempt $i"
+
+            git fetch origin master
+
+            if git rebase origin/master; then
+              if git push origin HEAD:master; then
+                echo "push success"
+                exit 0
+              fi
+            else
+              echo "rebase conflict"
+              git rebase --abort || true
+              exit 1
+            fi
+
+            sleep 5
+          done
+
+          echo "push failed after retries"
+          exit 1
 
   publish_github_pages:
     name: Build and publish GitHub Pages
@@ -154,9 +177,12 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
+          name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
           path: ./dist
           retention-days: 1
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
